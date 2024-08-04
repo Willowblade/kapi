@@ -1,0 +1,18 @@
+meta {
+  name: Create data entry
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://localhost:8000/upload
+  body: multipartForm
+  auth: none
+}
+
+body:multipart-form {
+  image: @file(/Users/laurentva-private/Downloads/Models in Motion - DeAngelo (small)/DeAngelo-Screenshots-001.jpg)
+  name: Laurent Van Acker
+  id: 12
+  signature: @file(/Users/laurentva-private/Downloads/Models in Motion - DeAngelo (small)/DeAngelo-Screenshots-003.jpg)
+}
