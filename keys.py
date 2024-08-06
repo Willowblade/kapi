@@ -80,6 +80,8 @@ def add_borrowed_key(key: Key, borrowedBy: Borrower, files: Files):
 
     borrowed_keys.append(borrowed_key)
 
+    return borrowed_key
+
 def return_key(borrow_id: str):
     for borrowed_key in borrowed_keys:
         if borrowed_key.id == borrow_id:

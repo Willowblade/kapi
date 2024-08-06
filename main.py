@@ -57,11 +57,11 @@ def write_base64_file(file_base64: str) -> str:
 @app.post("/keys/borrow")
 async def upload_form(
         borrower_name: str = Form(...),
-        borrower_company: str = Form(...),
+        borrower_company: str = Form(None),
         borrower_type: str = Form(...),
         key_id: str = Form(...),
-        key_building: str = Form(...),
-        key_room: str = Form(...),
+        key_building: str = Form(None),
+        key_room: str = Form(None),
         image_base64: str = Form(...),
         signature_base64: str = Form(...)
 ):
