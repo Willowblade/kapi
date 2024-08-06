@@ -9,6 +9,13 @@ from fastapi.staticfiles import StaticFiles
 
 from uuid import uuid4
 
+# from supabase import create_client, Client
+#
+# url: str = os.environ.get("SUPABASE_URL")
+# key: str = os.environ.get("SUPABASE_KEY")
+#
+# supabase: Client = create_client(url, key)
+
 app = FastAPI()
 
 # In-memory storage for form data
@@ -21,8 +28,10 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # Mount static files directory
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
+
 def get_uuid4_filename_with_extention(filename: str) -> str:
     return str(uuid4()) + os.path.splitext(filename)[-1]
+
 
 def get_image_from_base64(image: str) -> dict:
     prefix, contents = image.split(",", 1)
@@ -49,22 +58,16 @@ def write_file(file_base64: str) -> str:
         buffer.write(image_from_base64["data"])
     return filename
 
+
 @app.post("/upload/")
 async def upload_form(
-    name: str = Form(...),
-    id: str = Form(...),
-    image: str = Form(...), #base64 encoded image with extension prefix eg data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCADwAUADAREAAhEBAxEB/8QAHwAAAQU
-    signature: str = Form(...) #base64 encoded image with extension prefix eg data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCADwAUADAREAAhEBAxEB/8QAHwAAAQU
+        name: str = Form(...),
+        id: str = Form(...),
+        image: str = Form(...),
+        signature: str = Form(...)
 ):
     print("Received", name, id, signature[:100], image[:100])
-    # Save image file
-    # image_filename = get_uuid4_filename_with_extention("a.png")
-    # image_path = os.path.join(UPLOAD_DIR, image_filename)
-    # with open(image_path, "wb") as buffer:
-    #     shutil.copyfileobj(image.file, buffer)
 
-    # Save signature file
-    # signature_binary = signature.encode()
     image_filename = write_file(image)
     signature_filename = write_file(signature)
 
@@ -79,9 +82,11 @@ async def upload_form(
 
     return {"message": "Form data uploaded successfully"}
 
+
 @app.get("/data/")
 async def get_data():
     return JSONResponse(content=data_storage)
+
 
 @app.get("/uploads/{filename}")
 async def get_file(filename: str):
