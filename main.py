@@ -83,6 +83,11 @@ async def upload_form(
     return {"message": "Form data uploaded successfully"}
 
 
+@app.get("/health/")
+async def health_check():
+    return {"message": "Service is up and running"}
+
+
 @app.get("/data/")
 async def get_data():
     return JSONResponse(content=data_storage)
