@@ -95,3 +95,9 @@ async def get_file(filename: str):
         return FileResponse(path=file_path)
     else:
         return JSONResponse(content={"message": "File not found"}, status_code=404)
+
+
+if __name__ == '__main__':
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)
