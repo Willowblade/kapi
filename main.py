@@ -106,7 +106,8 @@ async def return_key(borrow_id: str):
 
 @app.get("/keys/borrowed")
 async def get_borrowed_keys():
-    return JSONResponse(content=get_currently_borrowed_keys())
+    currently_borrowed_keys = get_currently_borrowed_keys()
+    return JSONResponse(content=[dataclasses.asdict(borrowed_key) for borrowed_key in currently_borrowed_keys])
 
 
 
@@ -117,7 +118,8 @@ async def health_check():
 
 @app.get("/keys/")
 async def get_data(limit: int = Query(20), offset: int = Query(0)):
-    return JSONResponse(content=get_all_borrow_events(limit, offset))
+    keys = get_all_borrow_events(limit, offset)
+    return JSONResponse(content=[dataclasses.asdict(key) for key in keys])
 
 
 @app.get("/keys/{borrow_id}")
