@@ -1,25 +1,20 @@
 import base64
+import dataclasses
+import datetime
 
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, Form, Query
 from fastapi.responses import JSONResponse, FileResponse
-import shutil
 import os
-from typing import List, Dict
 from fastapi.staticfiles import StaticFiles
 
 from uuid import uuid4
 
-# from supabase import create_client, Client
-#
-# url: str = os.environ.get("SUPABASE_URL")
-# key: str = os.environ.get("SUPABASE_KEY")
-#
-# supabase: Client = create_client(url, key)
+from keys import is_key_borrowed, Key, Borrower, add_borrowed_key, Files, get_borrowed_key, \
+    get_currently_borrowed_keys, get_all_borrow_events
 
 app = FastAPI()
 
 # In-memory storage for form data
-data_storage: List[Dict] = []
 
 # Directory to save uploaded files
 UPLOAD_DIR = "uploads"
@@ -50,7 +45,7 @@ def get_image_from_base64(image: str) -> dict:
         }
 
 
-def write_file(file_base64: str) -> str:
+def write_base64_file(file_base64: str) -> str:
     image_from_base64 = get_image_from_base64(file_base64)
     filename = get_uuid4_filename_with_extention(f"file.{image_from_base64['extention']}")
     filepath = os.path.join(UPLOAD_DIR, filename)
@@ -59,28 +54,60 @@ def write_file(file_base64: str) -> str:
     return filename
 
 
-@app.post("/upload/")
+@app.post("/keys/borrow")
 async def upload_form(
-        name: str = Form(...),
-        id: str = Form(...),
-        image: str = Form(...),
-        signature: str = Form(...)
+        borrower_name: str = Form(...),
+        borrower_company: str = Form(...),
+        borrower_type: str = Form(...),
+        key_id: str = Form(...),
+        key_building: str = Form(...),
+        key_room: str = Form(...),
+        image_base64: str = Form(...),
+        signature_base64: str = Form(...)
 ):
-    print("Received", name, id, signature[:100], image[:100])
+    if is_key_borrowed(key_id):
+        return JSONResponse(content={"message": "Key is already borrowed"}, status_code=400)
 
-    image_filename = write_file(image)
-    signature_filename = write_file(signature)
+    image_filename = write_base64_file(image_base64)
+    signature_filename = write_base64_file(signature_base64)
 
+    key = Key(
+        id=key_id,
+        building=key_building,
+        room=key_room
+    )
+    borrower = Borrower(
+        name=borrower_name,
+        company=borrower_company,
+        type=borrower_type
+    )
+
+    files = Files(
+        image_filename=image_filename,
+        signature_filename=signature_filename
+    )
+
+    add_borrowed_key(key, borrower, files)
     # Store the form data in memory
-    form_data = {
-        "name": name,
-        "id": id,
-        "image_filename": image_filename,
-        "signature_filename": signature_filename,
-    }
-    data_storage.append(form_data)
 
-    return {"message": "Form data uploaded successfully"}
+    return {"message": "Borrowed key successfully"}
+
+@app.post("/keys/return/{borrow_id}")
+async def return_key(borrow_id: str):
+    borrowed_key = get_borrowed_key(borrow_id)
+    if borrowed_key is None:
+        return JSONResponse(content={"message": "Key not found"}, status_code=404)
+
+    borrowed_key.returnedAt = datetime.datetime.now().isoformat()
+    borrowed_key.borrowed = False
+
+    return JSONResponse(content={"message": "Key returned"})
+
+
+@app.get("/keys/borrowed")
+async def get_borrowed_keys():
+    return JSONResponse(content=get_currently_borrowed_keys())
+
 
 
 @app.get("/health/")
@@ -88,21 +115,24 @@ async def health_check():
     return {"message": "Service is up and running"}
 
 
-@app.get("/data/")
-async def get_data():
-    return JSONResponse(content=data_storage)
+@app.get("/keys/")
+async def get_data(limit: int = Query(20), offset: int = Query(0)):
+    return JSONResponse(content=get_all_borrow_events(limit, offset))
 
 
-@app.get("/uploads/{filename}")
+@app.get("/keys/{borrow_id}")
+async def get_key(borrow_id: str):
+    borrowed_key = get_borrowed_key(borrow_id)
+    if borrowed_key is None:
+        return JSONResponse(content={"message": "Key not found"}, status_code=404)
+
+    return JSONResponse(content=dataclasses.asdict(borrowed_key))
+
+
+@app.get("/files/{filename}")
 async def get_file(filename: str):
     file_path = os.path.join(UPLOAD_DIR, filename)
     if os.path.exists(file_path):
         return FileResponse(path=file_path)
     else:
         return JSONResponse(content={"message": "File not found"}, status_code=404)
-
-
-if __name__ == '__main__':
-    import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=8000)
