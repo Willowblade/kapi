@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from uuid import uuid4
 
 from keys import is_key_borrowed, Key, Borrower, add_borrowed_key, Files, get_borrowed_key, \
-    get_currently_borrowed_keys, get_all_borrow_events
+    return_borrowed_key, BorrowedKeyResponse, get_borrowed_keys
 
 app = FastAPI()
 
@@ -54,28 +54,30 @@ def write_base64_file(file_base64: str) -> str:
     return filename
 
 
-@app.post("/keys/borrow")
+@app.post("/borrowed-keys")
 async def upload_form(
         borrower_name: str = Form(...),
         borrower_company: str = Form(None),
         borrower_type: str = Form(...),
-        key_id: str = Form(...),
+        key_number: str = Form(...),
         key_building: str = Form(None),
         key_room: str = Form(None),
         image_base64: str = Form(...),
         signature_base64: str = Form(...)
 ):
-    if is_key_borrowed(key_id):
+    key = Key(
+        number=key_number,
+        building=key_building,
+        room=key_room
+    )
+
+    if is_key_borrowed(key.id):
         return JSONResponse(content={"message": "Key is already borrowed"}, status_code=400)
 
     image_filename = write_base64_file(image_base64)
     signature_filename = write_base64_file(signature_base64)
 
-    key = Key(
-        id=key_id,
-        building=key_building,
-        room=key_room
-    )
+
     borrower = Borrower(
         name=borrower_name,
         company=borrower_company,
@@ -92,23 +94,20 @@ async def upload_form(
 
     return {"message": "Borrowed key successfully"}
 
-@app.post("/keys/return/{borrow_id}")
+@app.post("/borrowed-keys/return/{borrow_id}")
 async def return_key(borrow_id: str):
-    borrowed_key = get_borrowed_key(borrow_id)
-    if borrowed_key is None:
-        return JSONResponse(content={"message": "Key not found"}, status_code=404)
-
-    borrowed_key.returnedAt = datetime.datetime.now().isoformat()
-    borrowed_key.borrowed = False
-
-    return JSONResponse(content={"message": "Key returned"})
+    try:
+        return_borrowed_key(borrow_id)
+        return JSONResponse(content={"message": "Key returned"})
+    except ValueError as e:
+        return JSONResponse(content={"message": "Borrowed key not found"}, status_code=404)
 
 
-@app.get("/keys/borrowed")
-async def get_borrowed_keys():
-    currently_borrowed_keys = get_currently_borrowed_keys()
-    return JSONResponse(content=[dataclasses.asdict(borrowed_key) for borrowed_key in currently_borrowed_keys])
 
+@app.get("/borrowed-keys", response_model=list[BorrowedKeyResponse])
+async def get_borrowed_keys_endpoint(borrowed: bool = Query(None), limit: int = Query(None), offset: int = Query(None)):
+    borrowed_keys = get_borrowed_keys(limit=limit, offset=offset, borrowed=borrowed)
+    return JSONResponse(content=[dataclasses.asdict(borrowed_key) for borrowed_key in borrowed_keys])
 
 
 @app.get("/health/")
@@ -116,13 +115,7 @@ async def health_check():
     return {"message": "Service is up and running"}
 
 
-@app.get("/keys/")
-async def get_data(limit: int = Query(20), offset: int = Query(0)):
-    keys = get_all_borrow_events(limit, offset)
-    return JSONResponse(content=[dataclasses.asdict(key) for key in keys])
-
-
-@app.get("/keys/{borrow_id}")
+@app.get("/borrowed-keys/{borrow_id}")
 async def get_key(borrow_id: str):
     borrowed_key = get_borrowed_key(borrow_id)
     if borrowed_key is None:

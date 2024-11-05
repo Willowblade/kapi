@@ -1,7 +1,7 @@
 import unittest
 
 from keys import get_borrowed_key, Key, Borrower, get_currently_borrowed_keys, get_all_borrow_events, borrowed_keys, \
-    is_key_borrowed, add_borrowed_key, return_key, Files
+    is_key_borrowed, add_borrowed_key, return_borrowed_key, Files
 
 
 class TestKeys(unittest.TestCase):
@@ -43,7 +43,7 @@ class TestKeys(unittest.TestCase):
             Files(image_filename=image_filename, signature_filename=signature_filename)
         )
 
-        return_key(borrow.id)
+        return_borrowed_key(borrow.id)
         borrowed_key = get_borrowed_key(borrow.id)
         self.assertIsNotNone(borrowed_key)
         self.assertFalse(borrowed_key.borrowed)

@@ -14,6 +14,8 @@
 * ~~Add returning a borrowed key~~
 
 ## Security
+
+* Add checkbox for GDPR and Privacy Policy1
 * Add API authentication via API Key (can just be .env variable in deployment and clients for this scope)
 
 
