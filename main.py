@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from uuid import uuid4
 
 from keys import is_key_borrowed, Key, Borrower, add_borrowed_key, Files, get_borrowed_key, \
-    return_borrowed_key, BorrowedKeyResponse, get_borrowed_keys
+    return_borrowed_key, BorrowedKeyResponse, get_borrowed_keys, get_reservations, add_reservation
 
 app = FastAPI()
 
@@ -60,8 +60,8 @@ async def upload_form(
         borrower_company: str = Form(None),
         borrower_type: str = Form(...),
         key_number: str = Form(...),
-        key_building: str = Form(None),
-        key_room: str = Form(None),
+        key_building: str = Form(...),
+        key_room: str = Form(...),
         image_base64: str = Form(...),
         signature_base64: str = Form(...)
 ):
@@ -105,7 +105,7 @@ async def return_key(borrow_id: str):
 
 
 @app.get("/borrowed-keys", response_model=list[BorrowedKeyResponse])
-async def get_borrowed_keys_endpoint(borrowed: bool = Query(None), limit: int = Query(None), offset: int = Query(None)):
+async def get_borrowed_keys_endpoint(borrowed: bool = Query(None), limit: int = Query(20), offset: int = Query(0)):
     borrowed_keys = get_borrowed_keys(limit=limit, offset=offset, borrowed=borrowed)
     return JSONResponse(content=[dataclasses.asdict(borrowed_key) for borrowed_key in borrowed_keys])
 
@@ -131,3 +131,44 @@ async def get_file(filename: str):
         return FileResponse(path=file_path)
     else:
         return JSONResponse(content={"message": "File not found"}, status_code=404)
+
+
+@app.get("/reservations")
+async def get_reservations_endpoint(limit: int = Query(20), offset: int = Query(0), collected: bool = Query(None), returned: bool = Query(None)):
+    reservations = get_reservations(limit=limit, offset=offset, collected=collected, returned=returned)
+    return JSONResponse(content=[dataclasses.asdict(reservation) for reservation in reservations])
+
+@app.post("/reservations")
+async def create_reservation(
+        key_number: str = Form(...),
+        key_building: str = Form(...),
+        key_room: str = Form(...),
+        borrower_name: str = Form(None),
+        borrower_company: str = Form(None),
+        borrower_type: str = Form(None),
+        # TODO should this be datetime.datetime? Check how this works in fastapi
+        collection_at: str = Form(None),
+        reservation_by: str = Form(None),
+        return_at: str = Form(None),
+):
+    key = Key(
+        number=key_number,
+        building=key_building,
+        room=key_room
+    )
+
+    borrower = None
+    if borrower_name:
+        if borrower_type is None and borrower_company is None:
+            borrower_type = "owner"
+
+
+        borrower = Borrower(
+            name=borrower_name,
+            company=borrower_company,
+            type=borrower_type
+        )
+
+    reservation = add_reservation(key, borrower=borrower, collection_at=collection_at, reservation_by=reservation_by, return_at=return_at)
+    return {"message": "Reservation created successfully", "data": reservation }
+

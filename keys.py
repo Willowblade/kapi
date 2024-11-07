@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 import os
 import uuid
+from optparse import Option
 from typing import Optional, Any, Self
 from uuid import uuid4, uuid5
 
@@ -27,6 +28,9 @@ BORROWER_UUID5_NAMESPACE = uuid.UUID("50ad06e6-5abe-48d2-8912-148077032ae0")
 # print("Borrowers", borrowers)
 # print("Borrowed Keys", borrowed_keys)
 
+
+
+# TODO we could make it more class based instead of current function based, as we already have the classes defined
 
 @dataclasses.dataclass
 class Key:
@@ -112,6 +116,98 @@ class BorrowedKeyResponse:
             returned_at=borrowed_key["returned_at"]
         )
 
+
+@dataclasses.dataclass
+class KeyReservation:
+    key_id: str
+    id: Optional[str] = None
+    collected: bool = False
+    returned: bool = False
+    created_at: Optional[str] = None
+    borrower_id: Optional[str] = None
+    collection_at: Optional[str] = None
+    reservation_by: Optional[str] = None
+    return_at: Optional[str] = None
+    borrowed_key_id: Optional[str] = None
+
+    def __post_init__(self):
+        self.id = str(uuid4())
+        self.created_at = datetime.datetime.now().isoformat()
+
+
+@dataclasses.dataclass
+class KeyReservationResponse:
+    id: str
+    key: Key
+    created_at: str
+    # both extra metadata for easier querying
+    collected: bool = False
+    returned: bool = False
+    borrower: Optional[Borrower] = None
+    collection_at: Optional[str] = None
+    reservation_by: Optional[str] = None
+    return_at: Optional[str] = None
+    borrowed_key_id: Optional[str] = None
+
+    @classmethod
+    def from_supabase(cls, key_reservation: dict) -> Self:
+        borrower = None
+
+        if key_reservation.get("borrowers") is not None:
+            borrower = Borrower(key_reservation["borrowers"]["name"], key_reservation["borrowers"]["company"], key_reservation["borrowers"]["type"], key_reservation["borrower_id"])
+
+        return cls(
+            id=key_reservation["id"],
+            key=Key(key_reservation["keys"]["number"], key_reservation["keys"]["building"], key_reservation["keys"]["room"], key_reservation["key_id"]),
+            created_at=key_reservation["created_at"],
+            borrower=borrower,
+            collection_at=key_reservation.get("collection_at"),
+            reservation_by=key_reservation.get("reservation_by"),
+            return_at=key_reservation.get("return_at"),
+            borrowed_key_id=key_reservation.get("borrowed_key_id")
+        )
+
+def add_reservation(key: Key, borrower: Borrower = None, collection_at: str = None, reservation_by: str = None, return_at: str = None):
+    if not does_key_exist(key.id):
+        add_key(key)
+
+    if borrower and not does_borrower_exist(borrower.id):
+        add_borrower(borrower)
+
+    reservation = supabase.table("key_reservations").insert([
+        {
+            "key_id": key.id,
+            "borrower_id": borrower.id if borrower is not None else None,
+            "collection_at": collection_at,
+            "reservation_by": reservation_by,
+            "return_at": return_at
+        }
+    ]).execute().data[0]
+
+    print("Created reservation", reservation)
+    return reservation
+
+def get_reservations(limit: int = 20, offset: int = 0, collected: bool = None, returned: bool = None) -> list[KeyReservationResponse]:
+    if collected is None and returned is None:
+        reservations = (
+            supabase.table("key_reservations")
+            .select("*", "keys(number, building, room)", "borrowers(name, company, type)")
+            .limit(limit)
+            .offset(offset)
+            .execute()
+        )
+    else:
+        reservations = (
+            supabase.table("key_reservations")
+            .select("*", "keys(number, building, room)", "borrowers(name, company, type)")
+            .eq("collected", collected)
+            .eq("returned", returned)
+            .limit(limit)
+            .offset(offset)
+            .execute()
+        )
+
+    return [KeyReservationResponse.from_supabase(reservation) for reservation in reservations.data]
 
 def get_borrowed_keys(limit: int = 20, offset: int = 0, borrowed: bool = None) -> list[BorrowedKeyResponse]:
     if borrowed is None:
