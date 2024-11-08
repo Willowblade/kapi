@@ -1,9 +1,10 @@
 import base64
 import dataclasses
-import datetime
 
 from fastapi import FastAPI, Form, Query
 from fastapi.responses import JSONResponse, FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+
 import os
 from fastapi.staticfiles import StaticFiles
 
@@ -13,6 +14,16 @@ from keys import is_key_borrowed, Key, Borrower, add_borrowed_key, Files, get_bo
     return_borrowed_key, BorrowedKeyResponse, get_borrowed_keys, get_reservations, add_reservation, delete_reservation
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 
 # In-memory storage for form data
 
