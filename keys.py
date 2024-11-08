@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 import os
 import uuid
+from gc import collect
 from optparse import Option
 from typing import Optional, Any, Self
 from uuid import uuid4, uuid5
@@ -164,7 +165,9 @@ class KeyReservationResponse:
             collection_at=key_reservation.get("collection_at"),
             reservation_by=key_reservation.get("reservation_by"),
             return_at=key_reservation.get("return_at"),
-            borrowed_key_id=key_reservation.get("borrowed_key_id")
+            borrowed_key_id=key_reservation.get("borrowed_key_id"),
+            collected=key_reservation.get("collected"),
+            returned=key_reservation.get("returned")
         )
 
 def add_reservation(key: Key, borrower: Borrower = None, collection_at: str = None, reservation_by: str = None, return_at: str = None):
@@ -237,6 +240,25 @@ def does_borrower_exist(borrower_id: str):
         return False
     return True
 
+def does_reservation_exist(reservation_id: str):
+    reservation = supabase.table("key_reservations").select("*").eq("id", reservation_id).execute()
+    if len(reservation.data) == 0:
+        return False
+    return True
+
+def get_open_reservation_for_key(key_id: str, borrower_id: str = None):
+    # TODO also infer date for the reservation or that's a filter in the frontend?
+    reservation = supabase.table("key_reservations").select("*").eq("key_id", key_id).eq("collected", False).execute()
+    if len(reservation.data) == 0:
+        return None
+    return KeyReservationResponse.from_supabase(reservation.data[0])
+
+def get_reservation_for_borrow_key(borrowed_key_id: str):
+    reservation = supabase.table("key_reservations").select("*").eq("borrowed_key_id", borrowed_key_id).execute()
+    if len(reservation.data) == 0:
+        return None
+    return KeyReservationResponse.from_supabase(reservation.data[0])
+
 def add_key(key: Key):
     supabase.table("keys").insert([
         {
@@ -261,7 +283,7 @@ def add_borrower(borrower: Borrower):
 
     return borrower
 
-def add_borrowed_key(key: Key, borrowed_by: Borrower, files: Files):
+def add_borrowed_key(key: Key, borrowed_by: Borrower, files: Files, reservation_id: str = None):
     # get the current time and date in iso format
     if is_key_borrowed(key.id):
         raise ValueError("Key already borrowed")
@@ -274,7 +296,7 @@ def add_borrowed_key(key: Key, borrowed_by: Borrower, files: Files):
 
     borrowed_key = BorrowedKey.from_objects(key, borrowed_by, files)
 
-    supabase.table("borrowed_keys").insert([
+    borrowed_key_db = supabase.table("borrowed_keys").insert([
         {
             "id": borrowed_key.id,
             "key": borrowed_key.key,
@@ -285,6 +307,26 @@ def add_borrowed_key(key: Key, borrowed_by: Borrower, files: Files):
             "borrowed_at": borrowed_key.borrowed_at,
         }
     ]).execute()
+
+    if reservation_id:
+        if not does_reservation_exist(reservation_id):
+            print(f"Reservation {reservation_id} does not exist")
+        else:
+            borrowed_key_id = borrowed_key_db.data[0]["id"]
+            print(f"Linking reservation {reservation_id} to borrowed key {borrowed_key_id}")
+            supabase.table("key_reservations").update({
+                "collected": True,
+                "borrowed_key_id": borrowed_key_id
+            }).eq("id", reservation_id).execute()
+
+    # TODO optional future but needs proper testing, auto-infer reservation from data
+    # existing_reservation = get_open_reservation_for_key(key.id, borrower=borrowed_key.borrowed_by)
+    # if existing_reservation:
+    #     supabase.table("key_reservations").update({
+    #         "collected": True,
+    #         "collection_at": datetime.datetime.now().isoformat(),
+    #         "borrowed_key_id": borrowed_key_db.data[0]["id"]
+    #     }).eq("id", existing_reservation.id).execute()
 
     return borrowed_key
 
@@ -301,6 +343,15 @@ def return_borrowed_key(borrow_id: str):
         "returned_at": borrowed_key.returned_at
     }).eq("id", borrow_id).execute()
 
+    reservation = get_reservation_for_borrow_key(borrow_id)
+    if reservation:
+        supabase.table("key_reservations").update({
+            "returned": True,
+            "return_at": datetime.datetime.now().isoformat()
+        }).eq("id", reservation.id).execute()
+        print(f"Updated reservation {reservation.id} to returned")
+
+    print(f"Returned borrowed key {borrow_id}")
     return borrowed_key
 
 def is_key_borrowed(key_id: str):
@@ -308,3 +359,9 @@ def is_key_borrowed(key_id: str):
     if len(borrowed_key_with_key_id.data) > 0:
         return True
     return False
+
+def delete_reservation(reservation_id: str):
+    if not does_reservation_exist(reservation_id):
+        raise ValueError("Reservation does not exist")
+    deleted_row = supabase.table("key_reservations").delete().eq("id", reservation_id).execute()
+    return deleted_row.data[0]

@@ -4,8 +4,14 @@ meta {
   seq: 7
 }
 
-get {
-  url: 
-  body: none
+post {
+  url: http://localhost:8000/reservations
+  body: multipartForm
   auth: none
+}
+
+body:multipart-form {
+  key_number: 1
+  key_room: 7A
+  key_building: Santiago
 }

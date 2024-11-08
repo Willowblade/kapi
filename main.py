@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from uuid import uuid4
 
 from keys import is_key_borrowed, Key, Borrower, add_borrowed_key, Files, get_borrowed_key, \
-    return_borrowed_key, BorrowedKeyResponse, get_borrowed_keys, get_reservations, add_reservation
+    return_borrowed_key, BorrowedKeyResponse, get_borrowed_keys, get_reservations, add_reservation, delete_reservation
 
 app = FastAPI()
 
@@ -63,7 +63,8 @@ async def upload_form(
         key_building: str = Form(...),
         key_room: str = Form(...),
         image_base64: str = Form(...),
-        signature_base64: str = Form(...)
+        signature_base64: str = Form(...),
+        reservation_id: str = Form(None),
 ):
     key = Key(
         number=key_number,
@@ -89,7 +90,7 @@ async def upload_form(
         signature_filename=signature_filename
     )
 
-    add_borrowed_key(key, borrower, files)
+    add_borrowed_key(key, borrower, files, reservation_id=reservation_id)
     # Store the form data in memory
 
     return {"message": "Borrowed key successfully"}
@@ -172,3 +173,11 @@ async def create_reservation(
     reservation = add_reservation(key, borrower=borrower, collection_at=collection_at, reservation_by=reservation_by, return_at=return_at)
     return {"message": "Reservation created successfully", "data": reservation }
 
+
+@app.delete("/reservations/{reservation_id}")
+async def delete_reservation_endpoint(reservation_id: str):
+    try:
+        reservation = delete_reservation(reservation_id)
+        return JSONResponse(content={"message": "Reservation deleted", "data": reservation})
+    except ValueError as e:
+        return JSONResponse(content={"message": "Reservation not found"}, status_code=404)
