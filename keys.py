@@ -200,15 +200,34 @@ def get_reservations(limit: int = 20, offset: int = 0, collected: bool = None, r
             .execute()
         )
     else:
-        reservations = (
-            supabase.table("key_reservations")
-            .select("*", "keys(number, building, room)", "borrowers(name, company, type)")
-            .eq("collected", collected)
-            .eq("returned", returned)
-            .limit(limit)
-            .offset(offset)
-            .execute()
-        )
+        if collected is not None and returned is not None:
+            reservations = (
+                supabase.table("key_reservations")
+                .select("*", "keys(number, building, room)", "borrowers(name, company, type)")
+                .eq("collected", collected)
+                .eq("returned", returned)
+                .limit(limit)
+                .offset(offset)
+                .execute()
+            )
+        elif collected is not None:
+            reservations = (
+                supabase.table("key_reservations")
+                .select("*", "keys(number, building, room)", "borrowers(name, company, type)")
+                .eq("collected", collected)
+                .limit(limit)
+                .offset(offset)
+                .execute()
+            )
+        elif returned is not None:
+            reservations = (
+                supabase.table("key_reservations")
+                .select("*", "keys(number, building, room)", "borrowers(name, company, type)")
+                .eq("returned", returned)
+                .limit(limit)
+                .offset(offset)
+                .execute()
+            )
 
     return [KeyReservationResponse.from_supabase(reservation) for reservation in reservations.data]
 
