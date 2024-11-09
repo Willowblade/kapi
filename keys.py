@@ -155,7 +155,7 @@ class KeyReservationResponse:
         borrower = None
 
         if key_reservation.get("borrowers") is not None:
-            borrower = Borrower(key_reservation["borrowers"]["name"], key_reservation["borrowers"]["company"], key_reservation["borrowers"]["type"], key_reservation["borrower_id"])
+            borrower = Borrower(key_reservation["borrowers"]["name"], key_reservation["borrowers"]["type"], key_reservation["borrowers"]["company"], key_reservation["borrower_id"])
 
         return cls(
             id=key_reservation["id"],
