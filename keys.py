@@ -276,7 +276,8 @@ def get_reservation_for_borrow_key(borrowed_key_id: str):
     reservation = supabase.table("key_reservations").select("*").eq("borrowed_key_id", borrowed_key_id).execute()
     if len(reservation.data) == 0:
         return None
-    return KeyReservationResponse.from_supabase(reservation.data[0])
+    return reservation.data[0]
+
 
 def add_key(key: Key):
     supabase.table("keys").insert([
@@ -366,9 +367,8 @@ def return_borrowed_key(borrow_id: str):
     if reservation:
         supabase.table("key_reservations").update({
             "returned": True,
-            "return_at": datetime.datetime.now().isoformat()
-        }).eq("id", reservation.id).execute()
-        print(f"Updated reservation {reservation.id} to returned")
+        }).eq("id", reservation["id"]).execute()
+        print(f"Updated reservation {reservation["id"]} to returned")
 
     print(f"Returned borrowed key {borrow_id}")
     return borrowed_key
