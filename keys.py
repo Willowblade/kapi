@@ -368,7 +368,7 @@ def return_borrowed_key(borrow_id: str):
         supabase.table("key_reservations").update({
             "returned": True,
         }).eq("id", reservation["id"]).execute()
-        print(f"Updated reservation {reservation["id"]} to returned")
+        print(f"Updated reservation {reservation['id']} to returned")
 
     print(f"Returned borrowed key {borrow_id}")
     return borrowed_key
