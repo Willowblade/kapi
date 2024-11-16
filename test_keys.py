@@ -1,7 +1,9 @@
 import unittest
 
-from keys import get_borrowed_key, Key, Borrower, get_currently_borrowed_keys, get_all_borrow_events, borrowed_keys, \
-    is_key_borrowed, add_borrowed_key, return_borrowed_key, Files
+from kapi.db.db import get_currently_borrowed_keys, get_all_borrow_events, borrowed_keys
+from kapi.db.borrowed_keys import Files, get_borrowed_key, add_borrowed_key, is_key_borrowed, return_borrowed_key
+from kapi.db.borrowers import Borrower
+from kapi.db.keys import Key
 
 
 class TestKeys(unittest.TestCase):
