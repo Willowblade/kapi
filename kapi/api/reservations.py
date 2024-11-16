@@ -10,7 +10,7 @@ from kapi.db.reservations import get_reservations, add_reservation, delete_reser
 
 router = APIRouter()
 
-@router.get("/")
+@router.get("")
 async def get_reservations_endpoint(limit: int = Query(20), offset: int = Query(0), collected: bool = Query(None), returned: bool = Query(None), building_id: str = Query(None)):
     reservations, total = get_reservations(limit=limit, offset=offset, collected=collected, returned=returned, building_id=building_id)
     return JSONResponse(content={
@@ -21,7 +21,7 @@ async def get_reservations_endpoint(limit: int = Query(20), offset: int = Query(
     })
 
 
-@router.post("/")
+@router.post("")
 async def create_reservation_endpoint(
         building_id: str = Form(...),
         key_room_number: str = Form(...),
@@ -57,7 +57,7 @@ async def create_reservation_endpoint(
     return {"message": "Reservation created successfully", "data": reservation }
 
 
-@router.delete("/{reservation_id}")
+@router.delete("{reservation_id}")
 async def delete_reservation_endpoint(reservation_id: str):
     try:
         reservation = delete_reservation(reservation_id)

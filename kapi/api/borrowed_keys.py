@@ -12,7 +12,7 @@ from kapi.util import write_base64_file
 router = APIRouter()
 
 
-@router.post("/")
+@router.post("")
 async def borrow_key_endpoint(
         building_id: str = Form(...),
         borrower_name: str = Form(...),
@@ -53,7 +53,7 @@ async def borrow_key_endpoint(
 
     return {"message": "Borrowed key successfully"}
 
-@router.post("/return/{borrow_id}")
+@router.post("return/{borrow_id}")
 async def return_key_endpoint(borrow_id: str):
     try:
         return_borrowed_key(borrow_id)
@@ -63,7 +63,7 @@ async def return_key_endpoint(borrow_id: str):
 
 
 
-@router.get("/", response_model=list[BorrowedKeyResponse])
+@router.get("", response_model=list[BorrowedKeyResponse])
 async def get_borrowed_keys_endpoint(borrowed: bool = Query(None), limit: int = Query(20), offset: int = Query(0), building_id: str = Query(None)):
     borrowed_keys, total = get_borrowed_keys(limit=limit, offset=offset, borrowed=borrowed, building_id=building_id)
     return JSONResponse(content={
@@ -74,7 +74,7 @@ async def get_borrowed_keys_endpoint(borrowed: bool = Query(None), limit: int = 
     })
 
 
-@router.get("/{borrow_id}")
+@router.get("{borrow_id}")
 async def get_key(borrow_id: str):
     borrowed_key = get_borrowed_key(borrow_id)
     if borrowed_key is None:

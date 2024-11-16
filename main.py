@@ -36,7 +36,7 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
 
-@app.get("/health/")
+@app.get("/health")
 async def health_check():
     return {"message": "Service is up and running"}
 
