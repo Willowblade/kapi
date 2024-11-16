@@ -150,24 +150,6 @@ class BorrowedKeyResponse:
 
 
 @dataclasses.dataclass
-class KeyReservation:
-    key_id: str
-    id: Optional[str] = None
-    collected: bool = False
-    returned: bool = False
-    created_at: Optional[str] = None
-    borrower_id: Optional[str] = None
-    collection_at: Optional[str] = None
-    reservation_by: Optional[str] = None
-    return_at: Optional[str] = None
-    borrowed_key_id: Optional[str] = None
-
-    def __post_init__(self):
-        self.id = str(uuid4())
-        self.created_at = datetime.datetime.now().isoformat()
-
-
-@dataclasses.dataclass
 class KeyReservationResponse:
     id: str
     key: Key
@@ -180,6 +162,7 @@ class KeyReservationResponse:
     reservation_by: Optional[str] = None
     return_at: Optional[str] = None
     borrowed_key_id: Optional[str] = None
+    building_id: Optional[str] = None
 
     @classmethod
     def from_supabase(cls, key_reservation: dict) -> Self:
@@ -198,7 +181,8 @@ class KeyReservationResponse:
             return_at=key_reservation.get("return_at"),
             borrowed_key_id=key_reservation.get("borrowed_key_id"),
             collected=key_reservation.get("collected"),
-            returned=key_reservation.get("returned")
+            returned=key_reservation.get("returned"),
+            building_id=key_reservation.get("building_id")
         )
 
 def add_reservation(key: Key, borrower: Borrower, description: str, collection_at: str, reservation_by: str, return_at: str = None):
