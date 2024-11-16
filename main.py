@@ -11,7 +11,8 @@ from fastapi.staticfiles import StaticFiles
 from uuid import uuid4
 
 from keys import is_key_borrowed, Key, Borrower, add_borrowed_key, Files, get_borrowed_key, \
-    return_borrowed_key, BorrowedKeyResponse, get_borrowed_keys, get_reservations, add_reservation, delete_reservation
+    return_borrowed_key, BorrowedKeyResponse, get_borrowed_keys, get_reservations, add_reservation, delete_reservation, \
+    get_all_buildings, add_building
 
 app = FastAPI()
 
@@ -67,20 +68,20 @@ def write_base64_file(file_base64: str) -> str:
 
 @app.post("/borrowed-keys")
 async def upload_form(
+        building_id: str = Form(...),
         borrower_name: str = Form(...),
         borrower_company: str = Form(None),
         borrower_type: str = Form(...),
-        key_number: str = Form(...),
-        key_building: str = Form(...),
-        key_room: str = Form(...),
+        key_room_number: str = Form(...),
+        key_type: str = Form(...),
         image_base64: str = Form(...),
         signature_base64: str = Form(...),
         reservation_id: str = Form(None),
 ):
     key = Key(
-        number=key_number,
-        building=key_building,
-        room=key_room
+        room_number=key_room_number,
+        building_id=building_id,
+        type=key_type
     )
 
     if is_key_borrowed(key.id):
@@ -118,8 +119,13 @@ async def return_key(borrow_id: str):
 
 @app.get("/borrowed-keys", response_model=list[BorrowedKeyResponse])
 async def get_borrowed_keys_endpoint(borrowed: bool = Query(None), limit: int = Query(20), offset: int = Query(0)):
-    borrowed_keys = get_borrowed_keys(limit=limit, offset=offset, borrowed=borrowed)
-    return JSONResponse(content=[dataclasses.asdict(borrowed_key) for borrowed_key in borrowed_keys])
+    borrowed_keys, total = get_borrowed_keys(limit=limit, offset=offset, borrowed=borrowed)
+    return JSONResponse(content={
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "data": [dataclasses.asdict(borrowed_key) for borrowed_key in borrowed_keys],
+    })
 
 
 @app.get("/health/")
@@ -146,27 +152,51 @@ async def get_file(filename: str):
 
 
 @app.get("/reservations")
-async def get_reservations_endpoint(limit: int = Query(20), offset: int = Query(0), collected: bool = Query(None), returned: bool = Query(None)):
-    reservations = get_reservations(limit=limit, offset=offset, collected=collected, returned=returned)
-    return JSONResponse(content=[dataclasses.asdict(reservation) for reservation in reservations])
+async def get_reservations_endpoint(limit: int = Query(20), offset: int = Query(0), collected: bool = Query(None), returned: bool = Query(None), building_id: str = Query(None)):
+    reservations, total = get_reservations(limit=limit, offset=offset, collected=collected, returned=returned, building_id=building_id)
+    return JSONResponse(content={
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "data": [dataclasses.asdict(reservation) for reservation in reservations],
+    })
+
+
+@app.get("/buildings")
+async def get_all_buildings_endpoint(search: str = Query(None), limit: int = Query(20), offset: int = Query(0)):
+    buildings, total = get_all_buildings(search=search, limit=limit, offset=offset)
+    return JSONResponse(content={
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "data": [dataclasses.asdict(building) for building in buildings],
+    })
+
+
+@app.post("/buildings")
+async def create_building(
+        name: str = Form(...),
+):
+    return add_building(name)
 
 @app.post("/reservations")
 async def create_reservation(
-        key_number: str = Form(...),
-        key_building: str = Form(...),
-        key_room: str = Form(...),
+        building_id: str = Form(...),
+        key_room_number: str = Form(...),
+        key_type: str = Form(...),
+        description: str = Form(...),
         borrower_name: str = Form(None),
         borrower_company: str = Form(None),
-        borrower_type: str = Form(None),
+        borrower_type: str = Form(...),
         # TODO should this be datetime.datetime? Check how this works in fastapi
-        collection_at: str = Form(None),
-        reservation_by: str = Form(None),
+        collection_at: str = Form(...),
+        reservation_by: str = Form(...),
         return_at: str = Form(None),
 ):
     key = Key(
-        number=key_number,
-        building=key_building,
-        room=key_room
+        room_number=key_room_number,
+        building_id=building_id,
+        type=key_type
     )
 
     borrower = None
@@ -181,7 +211,7 @@ async def create_reservation(
             type=borrower_type
         )
 
-    reservation = add_reservation(key, borrower=borrower, collection_at=collection_at, reservation_by=reservation_by, return_at=return_at)
+    reservation = add_reservation(key, borrower=borrower, description=description, collection_at=collection_at, reservation_by=reservation_by, return_at=return_at)
     return {"message": "Reservation created successfully", "data": reservation }
 
 

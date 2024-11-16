@@ -4,9 +4,10 @@ import os
 import uuid
 from gc import collect
 from optparse import Option
-from typing import Optional, Any, Self
+from typing import Optional, Any, Self, Tuple
 from uuid import uuid4, uuid5
 
+from postgrest.types import CountMethod
 from supabase import create_client, Client
 
 url: str = os.environ.get("SUPABASE_URL")
@@ -21,6 +22,7 @@ print(f"Connected to Supabase")
 
 
 BORROWER_UUID5_NAMESPACE = uuid.UUID("50ad06e6-5abe-48d2-8912-148077032ae0")
+BUILDING_UUID5_NAMESPACE = uuid.UUID("50ad06e6-5abe-48d2-8912-148077032aee")
 
 # keys = supabase.table("keys").select("*").execute()
 # borrowers = supabase.table("borrowers").select("*").execute()
@@ -34,14 +36,41 @@ BORROWER_UUID5_NAMESPACE = uuid.UUID("50ad06e6-5abe-48d2-8912-148077032ae0")
 # TODO we could make it more class based instead of current function based, as we already have the classes defined
 
 @dataclasses.dataclass
-class Key:
-    number: str
-    building: str
-    room: str
+class Building:
+    name: str
     id: Optional[str] = ""
 
     def __post_init__(self):
-        self.id = f"{self.building}-{self.room}-{self.number}"
+        if self.id == "":
+            self.id = str(uuid5(BUILDING_UUID5_NAMESPACE, self.name))
+
+
+def get_all_buildings(limit: int = 20, offset: int=0, search: str = None) -> Tuple[list[Building], int]:
+    query = supabase.table("buildings").select("*", count=CountMethod.exact)
+    if search is not None:
+        query = query.ilike("name", f"%{search}%")
+    buildings = query.limit(limit).offset(offset).execute()
+    return [Building(building["name"], id=building["id"]) for building in buildings.data], buildings.count
+
+def add_building(name: str):
+    building = Building(name)
+    supabase.table("buildings").insert([
+        {
+            "id": building.id,
+            "name": building.name
+        }
+    ]).execute()
+    return building
+
+@dataclasses.dataclass
+class Key:
+    room_number: str
+    building_id: str
+    type: str
+    id: Optional[str] = ""
+
+    def __post_init__(self):
+        self.id = f"{self.building_id}-{self.room_number}-{self.type}"
 
 @dataclasses.dataclass
 class Borrower:
@@ -65,8 +94,8 @@ class Files:
 
 @dataclasses.dataclass
 class BorrowedKey:
-    key: str # ID of the key
-    borrowed_by: str # ID of the borrower
+    key_id: str # ID of the key
+    borrower_id: str # ID of the borrower
     image_filename: str
     signature_filename: str
     borrowed: Optional[bool] = True
@@ -84,10 +113,10 @@ class BorrowedKey:
         self.borrowed = True
 
     @classmethod
-    def from_objects(cls, key: Key, borrowed_by: Borrower, files: Files):
+    def from_objects(cls, key: Key, borrower_id: Borrower, files: Files):
         return cls(
-            key=key.id,
-            borrowed_by=borrowed_by.id,
+            key_id=key.id,
+            borrower_id=borrower_id.id,
             image_filename=files.image_filename,
             signature_filename=files.signature_filename
         )
@@ -97,8 +126,9 @@ class BorrowedKey:
 class BorrowedKeyResponse:
     id: str
     key: Key
-    borrowed_by: Borrower
+    borrower_id: Borrower
     image_filename: str
+    building_id: str
     signature_filename: str
     borrowed: bool
     borrowed_at: str
@@ -108,10 +138,11 @@ class BorrowedKeyResponse:
     def from_supabase(cls, borrowed_key: dict) -> Self:
         return cls(
             id=borrowed_key["id"],
-            key=Key(borrowed_key["keys"]["number"], borrowed_key["keys"]["building"], borrowed_key["keys"]["room"], borrowed_key["key"]),
-            borrowed_by=Borrower(borrowed_key["borrowers"]["name"], borrowed_key["borrowers"]["type"], borrowed_key["borrowers"]["company"], borrowed_key["borrowed_by"]),
+            key=Key(borrowed_key["keys"]["room_number"], borrowed_key["keys"]["building_id"], borrowed_key["keys"]["type"], borrowed_key["key_id"]),
+            borrower_id=Borrower(borrowed_key["borrowers"]["name"], borrowed_key["borrowers"]["type"], borrowed_key["borrowers"]["company"], borrowed_key["borrower_id"]),
             image_filename=borrowed_key["image_filename"],
             signature_filename=borrowed_key["signature_filename"],
+            building_id=borrowed_key["building_id"],
             borrowed=borrowed_key["borrowed"],
             borrowed_at=borrowed_key["borrowed_at"],
             returned_at=borrowed_key["returned_at"]
@@ -159,7 +190,7 @@ class KeyReservationResponse:
 
         return cls(
             id=key_reservation["id"],
-            key=Key(key_reservation["keys"]["number"], key_reservation["keys"]["building"], key_reservation["keys"]["room"], key_reservation["key_id"]),
+            key=Key(key_reservation["keys"]["room_number"], key_reservation["keys"]["building_id"], key_reservation["keys"]["type"], key_reservation["key_id"]),
             created_at=key_reservation["created_at"],
             borrower=borrower,
             collection_at=key_reservation.get("collection_at"),
@@ -170,7 +201,7 @@ class KeyReservationResponse:
             returned=key_reservation.get("returned")
         )
 
-def add_reservation(key: Key, borrower: Borrower = None, collection_at: str = None, reservation_by: str = None, return_at: str = None):
+def add_reservation(key: Key, borrower: Borrower, description: str, collection_at: str, reservation_by: str, return_at: str = None):
     if not does_key_exist(key.id):
         add_key(key)
 
@@ -180,7 +211,9 @@ def add_reservation(key: Key, borrower: Borrower = None, collection_at: str = No
     reservation = supabase.table("key_reservations").insert([
         {
             "key_id": key.id,
+            "description": description,
             "borrower_id": borrower.id if borrower is not None else None,
+            "building_id": key.building_id,
             "collection_at": collection_at,
             "reservation_by": reservation_by,
             "return_at": return_at
@@ -190,58 +223,33 @@ def add_reservation(key: Key, borrower: Borrower = None, collection_at: str = No
     print("Created reservation", reservation)
     return reservation
 
-def get_reservations(limit: int = 20, offset: int = 0, collected: bool = None, returned: bool = None) -> list[KeyReservationResponse]:
-    if collected is None and returned is None:
-        reservations = (
-            supabase.table("key_reservations")
-            .select("*", "keys(number, building, room)", "borrowers(name, company, type)")
-            .limit(limit)
-            .offset(offset)
-            .execute()
-        )
-    else:
-        if collected is not None and returned is not None:
-            reservations = (
-                supabase.table("key_reservations")
-                .select("*", "keys(number, building, room)", "borrowers(name, company, type)")
-                .eq("collected", collected)
-                .eq("returned", returned)
-                .limit(limit)
-                .offset(offset)
-                .execute()
-            )
-        elif collected is not None:
-            reservations = (
-                supabase.table("key_reservations")
-                .select("*", "keys(number, building, room)", "borrowers(name, company, type)")
-                .eq("collected", collected)
-                .limit(limit)
-                .offset(offset)
-                .execute()
-            )
-        elif returned is not None:
-            reservations = (
-                supabase.table("key_reservations")
-                .select("*", "keys(number, building, room)", "borrowers(name, company, type)")
-                .eq("returned", returned)
-                .limit(limit)
-                .offset(offset)
-                .execute()
-            )
+def get_reservations(limit: int = 20, offset: int = 0, collected: bool = None, returned: bool = None, building_id = None) -> Tuple[list[KeyReservationResponse], int]:
+    query = supabase.table("key_reservations").select("*", "keys(room_number, building_id, type)", "borrowers(name, company, type)", count=CountMethod.exact)
 
-    return [KeyReservationResponse.from_supabase(reservation) for reservation in reservations.data]
+    if collected is not None:
+        query = query.eq("collected", collected)
+    if returned is not None:
+        query = query.eq("returned", returned)
+    if building_id is not None:
+        query = query.eq("building_id", building_id)
 
-def get_borrowed_keys(limit: int = 20, offset: int = 0, borrowed: bool = None) -> list[BorrowedKeyResponse]:
-    if borrowed is None:
-        borrowed_keys = supabase.table("borrowed_keys").select("*", "keys(number, building, room)", "borrowers(name, company, type)").limit(limit).offset(offset).execute()
-    else:
-        borrowed_keys = supabase.table("borrowed_keys").select("*", "keys(number, building, room)", "borrowers(name, company, type)").eq("borrowed", borrowed).limit(limit).offset(offset).execute()
+    reservations = query.limit(limit).offset(offset).execute()
 
-    return [BorrowedKeyResponse.from_supabase(borrowed_key) for borrowed_key in borrowed_keys.data]
+    return [KeyReservationResponse.from_supabase(reservation) for reservation in reservations.data], reservations.count
+
+def get_borrowed_keys(limit: int = 20, offset: int = 0, borrowed: bool = None, building_id = None) -> Tuple[list[BorrowedKeyResponse], int]:
+    query = supabase.table("borrowed_keys").select("*", "keys(room_number, building_id, type)", "borrowers(name, company, type)", count=CountMethod.exact)
+    if borrowed is not None:
+        query = query.eq("borrowed", borrowed)
+    if building_id is not None:
+        query = query.eq("building_id", building_id)
+    borrowed_keys = query.limit(limit).offset(offset).execute()
+
+    return [BorrowedKeyResponse.from_supabase(borrowed_key) for borrowed_key in borrowed_keys.data], borrowed_keys.count
 
 
 def get_borrowed_key(borrow_id: str):
-    borrowed_key = supabase.table("borrowed_keys").select("*", "keys(number, building, room)", "borrowers(name, company, type)").eq("id", borrow_id).eq("borrowed", True).execute()
+    borrowed_key = supabase.table("borrowed_keys").select("*", "keys(room_number, building_id, type)", "borrowers(name, company, type)").eq("id", borrow_id).eq("borrowed", True).execute()
     if len(borrowed_key.data) == 0:
         return None
     return BorrowedKeyResponse.from_supabase(borrowed_key.data[0])
@@ -283,9 +291,9 @@ def add_key(key: Key):
     supabase.table("keys").insert([
         {
             "id": key.id,
-            "number": key.number,
-            "building": key.building,
-            "room": key.room
+            "building_id": key.building_id,
+            "room_number": key.room_number,
+            "type": key.type
         }
     ]).execute()
 
@@ -303,7 +311,7 @@ def add_borrower(borrower: Borrower):
 
     return borrower
 
-def add_borrowed_key(key: Key, borrowed_by: Borrower, files: Files, reservation_id: str = None):
+def add_borrowed_key(key: Key, borrower_id: Borrower, files: Files, reservation_id: str = None):
     # get the current time and date in iso format
     if is_key_borrowed(key.id):
         raise ValueError("Key already borrowed")
@@ -311,20 +319,21 @@ def add_borrowed_key(key: Key, borrowed_by: Borrower, files: Files, reservation_
     if not does_key_exist(key.id):
         add_key(key)
 
-    if not does_borrower_exist(borrowed_by.id):
-        add_borrower(borrowed_by)
+    if not does_borrower_exist(borrower_id.id):
+        add_borrower(borrower_id)
 
-    borrowed_key = BorrowedKey.from_objects(key, borrowed_by, files)
+    borrowed_key = BorrowedKey.from_objects(key, borrower_id, files)
 
     borrowed_key_db = supabase.table("borrowed_keys").insert([
         {
             "id": borrowed_key.id,
-            "key": borrowed_key.key,
-            "borrowed_by": borrowed_key.borrowed_by,
+            "key_id": borrowed_key.key_id,
+            "borrower_id": borrowed_key.borrower_id,
             "image_filename": borrowed_key.image_filename,
             "signature_filename": borrowed_key.signature_filename,
             "borrowed": borrowed_key.borrowed,
             "borrowed_at": borrowed_key.borrowed_at,
+            "building_id": key.building_id
         }
     ]).execute()
 
@@ -340,7 +349,7 @@ def add_borrowed_key(key: Key, borrowed_by: Borrower, files: Files, reservation_
             }).eq("id", reservation_id).execute()
 
     # TODO optional future but needs proper testing, auto-infer reservation from data
-    # existing_reservation = get_open_reservation_for_key(key.id, borrower=borrowed_key.borrowed_by)
+    # existing_reservation = get_open_reservation_for_key(key.id, borrower=borrowed_key.borrower_id)
     # if existing_reservation:
     #     supabase.table("key_reservations").update({
     #         "collected": True,
@@ -374,7 +383,7 @@ def return_borrowed_key(borrow_id: str):
     return borrowed_key
 
 def is_key_borrowed(key_id: str):
-    borrowed_key_with_key_id = supabase.table("borrowed_keys").select("*").eq("key", key_id).eq("borrowed", True).execute()
+    borrowed_key_with_key_id = supabase.table("borrowed_keys").select("*").eq("key_id", key_id).eq("borrowed", True).execute()
     if len(borrowed_key_with_key_id.data) > 0:
         return True
     return False

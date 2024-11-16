@@ -5,7 +5,12 @@ meta {
 }
 
 get {
-  url: http://localhost:8000/reservations
+  url: http://localhost:8000/reservations?building_id=f547a995-d08f-4259-aa27-57c525d94773&limit=10
   body: none
   auth: none
+}
+
+params:query {
+  building_id: f547a995-d08f-4259-aa27-57c525d94773
+  limit: 10
 }
