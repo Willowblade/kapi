@@ -118,8 +118,8 @@ async def return_key(borrow_id: str):
 
 
 @app.get("/borrowed-keys", response_model=list[BorrowedKeyResponse])
-async def get_borrowed_keys_endpoint(borrowed: bool = Query(None), limit: int = Query(20), offset: int = Query(0)):
-    borrowed_keys, total = get_borrowed_keys(limit=limit, offset=offset, borrowed=borrowed)
+async def get_borrowed_keys_endpoint(borrowed: bool = Query(None), limit: int = Query(20), offset: int = Query(0), building_id: str = Query(None)):
+    borrowed_keys, total = get_borrowed_keys(limit=limit, offset=offset, borrowed=borrowed, building_id=building_id)
     return JSONResponse(content={
         "total": total,
         "limit": limit,

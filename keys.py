@@ -237,7 +237,7 @@ def get_reservations(limit: int = 20, offset: int = 0, collected: bool = None, r
 
     return [KeyReservationResponse.from_supabase(reservation) for reservation in reservations.data], reservations.count
 
-def get_borrowed_keys(limit: int = 20, offset: int = 0, borrowed: bool = None, building_id = None) -> Tuple[list[BorrowedKeyResponse], int]:
+def get_borrowed_keys(limit: int = 20, offset: int = 0, borrowed: bool = None, building_id: str = None) -> Tuple[list[BorrowedKeyResponse], int]:
     query = supabase.table("borrowed_keys").select("*", "keys(room_number, building_id, type)", "borrowers(name, company, type)", count=CountMethod.exact)
     if borrowed is not None:
         query = query.eq("borrowed", borrowed)
