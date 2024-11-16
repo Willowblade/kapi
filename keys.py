@@ -126,7 +126,7 @@ class BorrowedKey:
 class BorrowedKeyResponse:
     id: str
     key: Key
-    borrower_id: Borrower
+    borrower: Borrower
     image_filename: str
     building_id: str
     signature_filename: str
@@ -139,7 +139,7 @@ class BorrowedKeyResponse:
         return cls(
             id=borrowed_key["id"],
             key=Key(borrowed_key["keys"]["room_number"], borrowed_key["keys"]["building_id"], borrowed_key["keys"]["type"], borrowed_key["key_id"]),
-            borrower_id=Borrower(borrowed_key["borrowers"]["name"], borrowed_key["borrowers"]["type"], borrowed_key["borrowers"]["company"], borrowed_key["borrower_id"]),
+            borrower=Borrower(borrowed_key["borrowers"]["name"], borrowed_key["borrowers"]["type"], borrowed_key["borrowers"]["company"], borrowed_key["borrower_id"]),
             image_filename=borrowed_key["image_filename"],
             signature_filename=borrowed_key["signature_filename"],
             building_id=borrowed_key["building_id"],
