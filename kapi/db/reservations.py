@@ -22,6 +22,7 @@ class KeyReservationResponse:
     return_at: Optional[str] = None
     borrowed_key_id: Optional[str] = None
     building_id: Optional[str] = None
+    description: Optional[str] = None
 
     @classmethod
     def from_supabase(cls, key_reservation: dict) -> Self:
@@ -41,7 +42,8 @@ class KeyReservationResponse:
             borrowed_key_id=key_reservation.get("borrowed_key_id"),
             collected=key_reservation.get("collected"),
             returned=key_reservation.get("returned"),
-            building_id=key_reservation.get("building_id")
+            building_id=key_reservation.get("building_id"),
+            description=key_reservation.get("description")
         )
 
 
