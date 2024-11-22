@@ -16,9 +16,9 @@ class Borrower:
     id: Optional[str] = ""
 
     def id_hash_string(self):
-        if self.company is None:
-            return f"{self.name}-{self.type}"
-        return f"{self.name}-{self.type}-{self.company}"
+        if self.type == "company":
+            return f"{self.type}-{self.company}"
+        return f"{self.type}-{self.name}"
 
     def __post_init__(self):
         self.id = str(uuid5(BORROWER_UUID5_NAMESPACE, self.id_hash_string()))

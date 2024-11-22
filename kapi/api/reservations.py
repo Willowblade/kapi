@@ -41,17 +41,12 @@ async def create_reservation_endpoint(
         type=key_type
     )
 
-    borrower = None
-    if borrower_name:
-        if borrower_type is None and borrower_company is None:
-            borrower_type = "owner"
 
-
-        borrower = Borrower(
-            name=borrower_name,
-            company=borrower_company,
-            type=borrower_type
-        )
+    borrower = Borrower(
+        name=borrower_name,
+        company=borrower_company,
+        type=borrower_type
+    )
 
     reservation = add_reservation(key, borrower=borrower, description=description, collection_at=collection_at, reservation_by=reservation_by, return_at=return_at)
     return {"message": "Reservation created successfully", "data": reservation }
