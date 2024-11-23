@@ -14,3 +14,4 @@ print(f"Connected to Supabase")
 # TODO we could make it more class based instead of current function based, as we already have the classes defined
 
 
+

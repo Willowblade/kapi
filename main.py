@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 from fastapi.staticfiles import StaticFiles
 
-from kapi.util import UPLOAD_DIR
+from kapi.util import UPLOAD_DIR, get_file_from_bucket
 
 from kapi.api.borrowed_keys import router as borrowed_keys_router
 from kapi.api.reservations import router as reservations_router
@@ -47,6 +47,11 @@ async def get_file(filename: str):
     if os.path.exists(file_path):
         return FileResponse(path=file_path)
     else:
-        return JSONResponse(content={"message": "File not found"}, status_code=404)
+        try:
+            get_file_from_bucket(filename)
+            return FileResponse(path=file_path)
+        except Exception as e:
+            print("Error, file was not found on OS and in bucket", e)
+            return JSONResponse(content={"message": "File not found"}, status_code=404)
 
 

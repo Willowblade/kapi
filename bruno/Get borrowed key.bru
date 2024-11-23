@@ -1,0 +1,16 @@
+meta {
+  name: Get borrowed key
+  type: http
+  seq: 11
+}
+
+get {
+  url: http://localhost:8000/borrowed-keys?borrowed=true&limit=20
+  body: none
+  auth: none
+}
+
+params:query {
+  borrowed: true
+  limit: 20
+}

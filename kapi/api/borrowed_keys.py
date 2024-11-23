@@ -7,7 +7,7 @@ from kapi.db.borrowed_keys import Files, BorrowedKeyResponse, get_borrowed_keys,
     is_key_borrowed, return_borrowed_key
 from kapi.db.keys import Key
 from kapi.db.borrowers import Borrower
-from kapi.util import write_base64_file
+from kapi.util import write_base64_file, upload_file_to_bucket
 
 router = APIRouter()
 
@@ -34,7 +34,9 @@ async def borrow_key_endpoint(
         return JSONResponse(content={"message": "Key is already borrowed"}, status_code=400)
 
     image_filename = write_base64_file(image_base64)
+    upload_file_to_bucket(image_filename)
     signature_filename = write_base64_file(signature_base64)
+    upload_file_to_bucket(signature_filename)
 
 
     borrower = Borrower(
