@@ -74,7 +74,7 @@ async def get_borrowed_keys_endpoint(borrowed: bool = Query(None), limit: int = 
     })
 
 
-@router.get("{borrow_id}")
+@router.get("/{borrow_id}")
 async def get_key(borrow_id: str):
     borrowed_key = get_borrowed_key(borrow_id)
     if borrowed_key is None:
