@@ -52,7 +52,7 @@ async def create_reservation_endpoint(
     return {"message": "Reservation created successfully", "data": reservation }
 
 
-@router.delete("{reservation_id}")
+@router.delete("/{reservation_id}")
 async def delete_reservation_endpoint(reservation_id: str):
     try:
         reservation = delete_reservation(reservation_id)
