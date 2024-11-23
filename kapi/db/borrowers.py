@@ -17,7 +17,10 @@ class Borrower:
 
     def id_hash_string(self):
         if self.type == "company":
-            return f"{self.type}-{self.company}"
+            if self.name:
+                return f"{self.type}-{self.company}-{self.name}"
+            else:
+                return f"{self.type}-{self.company}"
         return f"{self.type}-{self.name}"
 
     def __post_init__(self):
