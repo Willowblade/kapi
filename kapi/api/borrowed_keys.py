@@ -53,7 +53,7 @@ async def borrow_key_endpoint(
 
     return {"message": "Borrowed key successfully"}
 
-@router.post("return/{borrow_id}")
+@router.post("/return/{borrow_id}")
 async def return_key_endpoint(borrow_id: str):
     try:
         return_borrowed_key(borrow_id)
