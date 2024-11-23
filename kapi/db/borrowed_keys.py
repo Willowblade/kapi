@@ -86,7 +86,7 @@ def get_borrowed_keys(limit: int = 20, offset: int = 0, borrowed: bool = None, b
 
 
 def get_borrowed_key(borrow_id: str):
-    borrowed_key = supabase.table("borrowed_keys").select("*", "keys(room_number, building_id, type)", "borrowers(name, company, type)").eq("id", borrow_id).eq("borrowed", True).execute()
+    borrowed_key = supabase.table("borrowed_keys").select("*", "keys(room_number, building_id, type)", "borrowers(name, company, type)").eq("id", borrow_id).execute()
     if len(borrowed_key.data) == 0:
         return None
     return BorrowedKeyResponse.from_supabase(borrowed_key.data[0])
@@ -152,6 +152,8 @@ def return_borrowed_key(borrow_id: str):
     borrowed_key = get_borrowed_key(borrow_id)
     if borrowed_key is None:
         raise ValueError("Borrowed key not found")
+    if not borrowed_key.borrowed:
+        raise ValueError("Key already returned")
 
     borrowed_key.returned_at = datetime.datetime.now().isoformat()
     borrowed_key.borrowed = False
