@@ -10,6 +10,7 @@ from kapi.util import UPLOAD_DIR, get_file_from_bucket
 from kapi.api.borrowed_keys import router as borrowed_keys_router
 from kapi.api.reservations import router as reservations_router
 from kapi.api.buildings import router as buildings_router
+from kapi.api.auth import router as auth_router
 
 app = FastAPI()
 
@@ -25,6 +26,7 @@ app.add_middleware(
 app.include_router(borrowed_keys_router, prefix="/borrowed-keys")
 app.include_router(reservations_router, prefix="/reservations")
 app.include_router(buildings_router, prefix="/buildings")
+app.include_router(auth_router, prefix="/auth")
 
 # In-memory storage for form data
 
