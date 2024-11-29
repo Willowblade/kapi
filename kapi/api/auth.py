@@ -1,17 +1,13 @@
-import os
 import jwt
-from fastapi import APIRouter, Form
+from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from uuid import uuid4
 import time
 
-from kapi.db.auth import user_login
+from kapi.auth.auth import user_login
+from kapi.auth.constants import KAPI_PRIVATE_KEY, API_KEY
 
 router = APIRouter()
-
-KAPI_PRIVATE_KEY = os.getenv("KAPI_PRIVATE_KEY", str(uuid4()))
-API_KEY = os.getenv("KAPI_API_KEY", str(uuid4()))
 
 
 class LoginModel(BaseModel):

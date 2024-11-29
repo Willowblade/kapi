@@ -5,12 +5,15 @@ meta {
 }
 
 get {
-  url: http://localhost:8000/reservations?building_id=f547a995-d08f-4259-aa27-57c525d94773&limit=10
+  url: http://localhost:8000/reservations?limit=10
   body: none
   auth: none
 }
 
 params:query {
-  building_id: f547a995-d08f-4259-aa27-57c525d94773
   limit: 10
+}
+
+headers {
+  X-API-KEY: 55f8d9cc-7d10-4787-891e-4feae0b2d750
 }

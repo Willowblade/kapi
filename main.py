@@ -12,6 +12,10 @@ from kapi.api.reservations import router as reservations_router
 from kapi.api.buildings import router as buildings_router
 from kapi.api.auth import router as auth_router
 
+from kapi.auth.constants import API_KEY
+
+
+print(API_KEY)
 app = FastAPI()
 
 app.add_middleware(
@@ -21,6 +25,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def api_key_middleware(request, call_next):
+    if not request.url.path.startswith("/auth"):
+        api_key = request.headers.get("X-API-KEY")
+        if api_key != API_KEY:
+            return JSONResponse(content={"message": "Invalid API Key"}, status_code=403)
+    response = await call_next(request)
+    return response
+
 
 
 app.include_router(borrowed_keys_router, prefix="/borrowed-keys")
