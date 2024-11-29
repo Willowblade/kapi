@@ -28,7 +28,7 @@ app.add_middleware(
 
 @app.middleware("http")
 async def api_key_middleware(request, call_next):
-    if not request.url.path.startswith("/auth"):
+    if not request.url.path.startswith("/auth") or request.url.path == "/health":
         api_key = request.headers.get("X-API-KEY")
         if api_key != API_KEY:
             return JSONResponse(content={"message": "Invalid API Key"}, status_code=403)
