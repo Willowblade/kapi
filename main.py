@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -28,7 +28,7 @@ app.add_middleware(
 
 @app.middleware("http")
 async def api_key_middleware(request, call_next):
-    if not request.url.path.startswith("/auth") or request.url.path == "/health":
+    if not (request.url.path.startswith("/auth") or request.url.path.startswith("/health") or request.url.path.startswith("/files")):
         api_key = request.headers.get("X-API-KEY")
         if api_key != API_KEY:
             return JSONResponse(content={"message": "Invalid API Key"}, status_code=403)
@@ -58,7 +58,9 @@ async def health_check():
 
 
 @app.get("/files/{filename}")
-async def get_file(filename: str):
+async def get_file(filename: str, api_key: str = Query('')):
+    if api_key != API_KEY:
+        return JSONResponse(content={"message": "Invalid API Key"}, status_code=403)
     file_path = os.path.join(UPLOAD_DIR, filename)
     if os.path.exists(file_path):
         return FileResponse(path=file_path)
