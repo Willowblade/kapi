@@ -20,6 +20,12 @@ class Building:
             self.id = str(uuid5(BUILDING_UUID5_NAMESPACE, self.name))
 
 
+def does_building_exist(building_name: str):
+    building = supabase.table("buildings").select("*").eq("name", building_name).execute()
+    if len(building.data) == 0:
+        return False
+    return True
+
 def get_all_buildings(limit: int = 20, offset: int=0, search: str = None) -> Tuple[list[Building], int]:
     query = supabase.table("buildings").select("*", count=CountMethod.exact)
     if search is not None:
@@ -29,6 +35,9 @@ def get_all_buildings(limit: int = 20, offset: int=0, search: str = None) -> Tup
 
 
 def add_building(name: str):
+    if does_building_exist(name):
+        raise ValueError("Building already exists")
+
     building = Building(name)
     supabase.table("buildings").insert([
         {

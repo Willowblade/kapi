@@ -23,4 +23,7 @@ async def get_all_buildings_endpoint(search: str = Query(None), limit: int = Que
 async def create_building(
         name: str = Form(...),
 ):
-    return add_building(name)
+    try:
+        return add_building(name)
+    except ValueError as e:
+        return JSONResponse(content={"message": str(e)}, status_code=400)
