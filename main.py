@@ -23,7 +23,8 @@ app.add_middleware(
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*", "X-API-KEY"],
+    allow_headers=["*"],
+    expose_headers=["X-API-KEY"],
 )
 
 @app.middleware("http")
