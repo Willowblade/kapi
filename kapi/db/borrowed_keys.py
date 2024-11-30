@@ -80,6 +80,8 @@ def get_borrowed_keys(limit: int = 20, offset: int = 0, borrowed: bool = None, b
         query = query.eq("borrowed", borrowed)
     if building_id is not None:
         query = query.eq("building_id", building_id)
+    # sort by borrowed_at desc default
+    query = query.order("borrowed_at", desc=True)
     borrowed_keys = query.limit(limit).offset(offset).execute()
 
     return [BorrowedKeyResponse.from_supabase(borrowed_key) for borrowed_key in borrowed_keys.data], borrowed_keys.count

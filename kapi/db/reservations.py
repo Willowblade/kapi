@@ -80,6 +80,8 @@ def get_reservations(limit: int = 20, offset: int = 0, collected: bool = None, r
     if building_id is not None:
         query = query.eq("building_id", building_id)
 
+    query = query.order("created_at", desc=True)
+
     reservations = query.limit(limit).offset(offset).execute()
 
     return [KeyReservationResponse.from_supabase(reservation) for reservation in reservations.data], reservations.count
