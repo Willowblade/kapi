@@ -18,15 +18,6 @@ from kapi.auth.constants import API_KEY
 print(API_KEY)
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["X-API-KEY"],
-)
-
 @app.middleware("http")
 async def api_key_middleware(request, call_next):
     if not (request.url.path.startswith("/auth") or request.url.path.startswith("/health") or request.url.path.startswith("/files")):
@@ -37,6 +28,14 @@ async def api_key_middleware(request, call_next):
     return response
 
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-API-KEY"],
+)
 
 app.include_router(borrowed_keys_router, prefix="/borrowed-keys")
 app.include_router(reservations_router, prefix="/reservations")
