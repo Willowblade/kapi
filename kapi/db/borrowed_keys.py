@@ -63,8 +63,20 @@ class BorrowedKeyResponse:
     def from_supabase(cls, borrowed_key: dict) -> Self:
         return cls(
             id=borrowed_key["id"],
-            key=Key(borrowed_key["keys"]["room_number"], borrowed_key["keys"]["building_id"], borrowed_key["keys"]["type"], borrowed_key["key_id"]),
-            borrower=Borrower(borrowed_key["borrowers"]["name"], borrowed_key["borrowers"]["type"], borrowed_key["borrowers"]["company"], borrowed_key["borrower_id"]),
+            key=Key(
+                borrowed_key["keys"]["room_number"],
+                borrowed_key["keys"]["building_id"],
+                borrowed_key["keys"]["type"],
+                borrowed_key["key_id"]
+            ),
+            borrower=Borrower(
+                name=borrowed_key["borrowers"]["name"],
+                type=borrowed_key["borrowers"]["type"],
+                company=borrowed_key["borrowers"].get("company"),
+                id=borrowed_key["borrower_id"],
+                email=borrowed_key["borrowers"].get("email"),
+                phone=borrowed_key["borrowers"].get("phone")
+            ),
             image_filename=borrowed_key["image_filename"],
             signature_filename=borrowed_key["signature_filename"],
             building_id=borrowed_key["building_id"],
@@ -75,7 +87,7 @@ class BorrowedKeyResponse:
 
 
 def get_borrowed_keys(limit: int = 20, offset: int = 0, borrowed: bool = None, building_id: str = None) -> Tuple[list[BorrowedKeyResponse], int]:
-    query = supabase.table("borrowed_keys").select("*", "keys(room_number, building_id, type)", "borrowers(name, company, type)", count=CountMethod.exact)
+    query = supabase.table("borrowed_keys").select("*", "keys(*)", "borrowers(*)", count=CountMethod.exact)
     if borrowed is not None:
         query = query.eq("borrowed", borrowed)
     if building_id is not None:
@@ -88,7 +100,7 @@ def get_borrowed_keys(limit: int = 20, offset: int = 0, borrowed: bool = None, b
 
 
 def get_borrowed_key(borrow_id: str):
-    borrowed_key = supabase.table("borrowed_keys").select("*", "keys(room_number, building_id, type)", "borrowers(name, company, type)").eq("id", borrow_id).execute()
+    borrowed_key = supabase.table("borrowed_keys").select("*", "keys(*)", "borrowers(*)").eq("id", borrow_id).execute()
     if len(borrowed_key.data) == 0:
         return None
     return BorrowedKeyResponse.from_supabase(borrowed_key.data[0])

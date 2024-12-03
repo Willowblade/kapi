@@ -18,6 +18,8 @@ async def borrow_key_endpoint(
         borrower_name: str = Form(...),
         borrower_company: str = Form(None),
         borrower_type: str = Form(...),
+        borrower_email: str = Form(None),
+        borrower_phone: str = Form(None),
         key_room_number: str = Form(...),
         key_type: str = Form(...),
         image_base64: str = Form(...),
@@ -27,7 +29,7 @@ async def borrow_key_endpoint(
     key = Key(
         room_number=key_room_number,
         building_id=building_id,
-        type=key_type
+        type=key_type,
     )
 
     if is_key_borrowed(key.id):
@@ -38,11 +40,16 @@ async def borrow_key_endpoint(
     signature_filename = write_base64_file(signature_base64)
     upload_file_to_bucket(signature_filename)
 
+    if borrower_email is None and borrower_phone is None:
+        return JSONResponse(content={"message": "Borrower must have either an email or phone number"}, status_code=400)
+
 
     borrower = Borrower(
         name=borrower_name,
         company=borrower_company,
-        type=borrower_type
+        type=borrower_type,
+        phone=borrower_phone,
+        email=borrower_email
     )
 
     files = Files(

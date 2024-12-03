@@ -71,7 +71,7 @@ def add_reservation(key: Key, borrower: Borrower, description: str, collection_a
 
 
 def get_reservations(limit: int = 20, offset: int = 0, collected: bool = None, returned: bool = None, building_id = None) -> Tuple[list[KeyReservationResponse], int]:
-    query = supabase.table("key_reservations").select("*", "keys(room_number, building_id, type)", "borrowers(name, company, type)", count=CountMethod.exact)
+    query = supabase.table("key_reservations").select("*", "keys(*)", "borrowers(*)", count=CountMethod.exact)
 
     if collected is not None:
         query = query.eq("collected", collected)

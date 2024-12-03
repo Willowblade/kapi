@@ -19,9 +19,10 @@ async def user_login_endpoint(
         data: LoginModel
 ):
     try:
-        user_login(data.email, data.password)
+        user = user_login(data.email, data.password)
         # login success
         jwt_token = jwt.encode({
+            "email": user.user.email,
             "api_key": API_KEY,
             "exp": int(time.time() + 60 * 60 * 24 * 7) # let's pick a week expiration since internal tool...
         }, KAPI_PRIVATE_KEY, algorithm="HS256")

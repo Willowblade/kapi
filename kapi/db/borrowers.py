@@ -14,6 +14,8 @@ class Borrower:
     type: str
     company: Optional[str] = ""
     id: Optional[str] = ""
+    email: Optional[str] = None
+    phone: Optional[str] = None
 
     def id_hash_string(self):
         if self.type == "company":
@@ -40,7 +42,9 @@ def add_borrower(borrower: Borrower):
             "id": borrower.id,
             "name": borrower.name,
             "company": borrower.company,
-            "type": borrower.type
+            "type": borrower.type,
+            "email": borrower.email,
+            "phone": borrower.phone
         }
     ]).execute()
 
