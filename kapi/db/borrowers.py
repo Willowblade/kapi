@@ -18,12 +18,16 @@ class Borrower:
     phone: Optional[str] = None
 
     def id_hash_string(self):
+        s = f"{self.type}"
         if self.type == "company":
-            if self.name:
-                return f"{self.type}-{self.company}-{self.name}"
-            else:
-                return f"{self.type}-{self.company}"
-        return f"{self.type}-{self.name}"
+            s = f"{s}-{self.company}"
+        if self.name:
+            s = f"{s}-{self.name}"
+        if self.email:
+            s = f"{s}-{self.email}"
+        if self.phone:
+            s = f"{s}-{self.phone}"
+        return s
 
     def __post_init__(self):
         self.id = str(uuid5(BORROWER_UUID5_NAMESPACE, self.id_hash_string()))
