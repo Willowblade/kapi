@@ -7,6 +7,7 @@ from kapi.db.borrowed_keys import Files, BorrowedKeyResponse, get_borrowed_keys,
     is_key_borrowed, return_borrowed_key
 from kapi.db.keys import Key
 from kapi.db.borrowers import Borrower
+from kapi.notifications import send_push_notification
 from kapi.util import write_base64_file, upload_file_to_bucket
 
 router = APIRouter()
@@ -59,6 +60,11 @@ async def borrow_key_endpoint(
 
     add_borrowed_key(key, borrower, files, reservation_id=reservation_id)
     # Store the form data in memory
+
+    if reservation_id:
+        send_push_notification(f"Key borrowed by {borrower_name} from reservation")
+    else:
+        send_push_notification(f"Key borrowed by {borrower_name}")
 
     return {"message": "Borrowed key successfully"}
 

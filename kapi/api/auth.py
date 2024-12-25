@@ -6,6 +6,7 @@ import time
 
 from kapi.auth.auth import user_login
 from kapi.auth.constants import KAPI_PRIVATE_KEY, API_KEY
+from kapi.notifications import send_push_notification
 
 router = APIRouter()
 
@@ -13,6 +14,7 @@ router = APIRouter()
 class LoginModel(BaseModel):
     email: str
     password: str
+
 
 @router.post("/login")
 async def user_login_endpoint(
@@ -26,6 +28,7 @@ async def user_login_endpoint(
             "api_key": API_KEY,
             "exp": int(time.time() + 60 * 60 * 24 * 7) # let's pick a week expiration since internal tool...
         }, KAPI_PRIVATE_KEY, algorithm="HS256")
+        send_push_notification(f"User {data.email} logged in")
         return JSONResponse(content={
             "success": True,
             "access_token": jwt_token,

@@ -7,6 +7,7 @@ from kapi.db.borrowers import Borrower
 from kapi.db.keys import Key
 
 from kapi.db.reservations import get_reservations, add_reservation, delete_reservation
+from kapi.notifications import send_push_notification
 
 router = APIRouter()
 
@@ -49,6 +50,8 @@ async def create_reservation_endpoint(
     )
 
     reservation = add_reservation(key, borrower=borrower, description=description, collection_at=collection_at, reservation_by=reservation_by, return_at=return_at)
+
+    send_push_notification(f"Reservation created")
     return {"message": "Reservation created successfully", "data": reservation }
 
 

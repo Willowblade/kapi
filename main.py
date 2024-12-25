@@ -14,6 +14,7 @@ from kapi.api.auth import router as auth_router
 
 from kapi.auth.constants import API_KEY
 
+from kapi.notifications import send_push_notification, send_notification_if_needed
 
 print(API_KEY)
 app = FastAPI()
@@ -54,6 +55,7 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 @app.get("/health")
 async def health_check():
+    send_notification_if_needed()
     return {"message": "Service is up and running"}
 
 
