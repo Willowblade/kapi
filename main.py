@@ -14,7 +14,7 @@ from kapi.api.auth import router as auth_router
 
 from kapi.auth.constants import API_KEY
 
-from kapi.notifications import send_push_notification, send_notification_if_needed
+from kapi.notifications import send_notification_if_needed
 
 print(API_KEY)
 app = FastAPI()

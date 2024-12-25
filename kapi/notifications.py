@@ -6,11 +6,12 @@ PUSH_API_KEY = os.getenv("PUSH_API_KEY")
 PUSH_USER_KEY = os.getenv("PUSH_USER_KEY")
 
 
-last_send = time.time()
+last_send = time.time() - 6 * 3600
 
 
 def send_push_notification(message: str):
     try:
+        print(f"Sending push notification: {message}")
         url = "https://api.pushover.net/1/messages.json"
         requests.post(url, data={
             'token': PUSH_API_KEY,
@@ -26,4 +27,4 @@ def send_push_notification(message: str):
 
 def send_notification_if_needed():
     if time.time() - last_send > 6 * 3600:
-        send_push_notification('Still working!')
+        send_push_notification('Still going strong!')
