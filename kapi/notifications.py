@@ -1,4 +1,6 @@
 import os
+from typing import Optional
+
 import requests
 import time
 
@@ -6,7 +8,7 @@ PUSH_API_KEY = os.getenv("PUSH_API_KEY")
 PUSH_USER_KEY = os.getenv("PUSH_USER_KEY")
 
 
-last_send = time.time() - 6 * 3600
+last_send: Optional[float] = None
 
 
 def send_push_notification(message: str):
@@ -26,5 +28,10 @@ def send_push_notification(message: str):
         print(f"Failed to send push notification: {e}")
 
 def send_notification_if_needed():
+    if last_send is None:
+        send_push_notification('Service started')
+
     if time.time() - last_send > 6 * 3600:
         send_push_notification('Still going strong!')
+
+
